@@ -6,6 +6,7 @@ import os
 # Import routes
 from routes.upload import upload_bp
 from routes.color import color_bp
+from routes.transform import transform_bp
 #from routes.enhancement import enhancement_bp
 
 # Init app
@@ -22,6 +23,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # max 16MB
 # Register blueprint
 app.register_blueprint(upload_bp)
 app.register_blueprint(color_bp)
+app.register_blueprint(transform_bp)
 #app.register_blueprint(enhancement_bp)
 
 # Run server
