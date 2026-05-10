@@ -8,6 +8,7 @@ from routes.upload import upload_bp
 from routes.color import color_bp
 from routes.transform import transform_bp
 from routes.enhancement import enhancement_bp
+from routes.restoration import restoration_bp
 #from routes.enhancement import enhancement_bp
 
 # Init app
@@ -26,7 +27,8 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(color_bp)
 app.register_blueprint(transform_bp)
 app.register_blueprint(enhancement_bp)
-#app.register_blueprint(enhancement_bp)
+app.register_blueprint(restoration_bp)
+
 
 # Run server
 if __name__ == '__main__':
