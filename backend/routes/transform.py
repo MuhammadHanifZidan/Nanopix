@@ -98,6 +98,89 @@ def resize():
         'new_height': new_h
     })
 
+@transform_bp.route('/api/process/crop', methods=['POST'])
+def crop():
+    data = request.get_json()
+    filename = data.get('filename')
+    x = data.get('x')
+    y = data.get('y')
+    width = data.get('width')
+    height = data.get('height')
+
+    if any(v is None for v in [filename, x, y, width, height]):
+        return jsonify({'error': 'filename, x, y, width, height diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    h, w = img.shape[:2]
+
+    # clamp supaya area crop ga keluar batas gambar
+    x1 = max(0, int(x))
+    y1 = max(0, int(y))
+    x2 = min(w, int(x + width))
+    y2 = min(h, int(y + height))
+
+    if x2 <= x1 or y2 <= y1:
+        return jsonify({'error': 'Area crop tidak valid'}), 400
+
+    cropped = img[y1:y2, x1:x2]
+
+    ext = filename.rsplit('.', 1)[-1]
+    out_filename = save_processed(cropped, ext)
+
+    return jsonify({
+        'message': 'Crop berhasil',
+        'filename': out_filename,
+        'new_width': x2 - x1,
+        'new_height': y2 - y1
+    })
+
+@transform_bp.route('/api/process/flip', methods=['POST'])
+def flip():
+    data = request.get_json()
+    filename = data.get('filename')
+    direction = data.get('direction')  # 'horizontal', 'vertical', atau 'both'
+
+    if not filename or direction not in ('horizontal', 'vertical', 'both'):
+        return jsonify({'error': "direction harus 'horizontal', 'vertical', atau 'both'"}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    flip_code = {'horizontal': 1, 'vertical': 0, 'both': -1}[direction]
+    flipped = cv2.flip(img, flip_code)
+
+    ext = filename.rsplit('.', 1)[-1]
+    out_filename = save_processed(flipped, ext)
+
+    return jsonify({'message': 'Flip berhasil', 'filename': out_filename})
+
+@transform_bp.route('/api/process/translate', methods=['POST'])
+def translate():
+    data = request.get_json()
+    filename = data.get('filename')
+    tx = data.get('tx', 0)  # geser horizontal (px), negatif = kiri
+    ty = data.get('ty', 0)  # geser vertikal (px), negatif = atas
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    h, w = img.shape[:2]
+    M = np.float32([[1, 0, tx],
+                    [0, 1, ty]])
+    translated = cv2.warpAffine(img, M, (w, h))
+
+    ext = filename.rsplit('.', 1)[-1]
+    out_filename = save_processed(translated, ext)
+
+    return jsonify({'message': 'Translate berhasil', 'filename': out_filename})
 
 @transform_bp.route('/api/processed/<filename>', methods=['GET'])
 def get_processed(filename):
