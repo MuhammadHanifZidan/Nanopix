@@ -40,4 +40,7 @@ def upload_image():
 
 @upload_bp.route('/api/image/<filename>', methods=['GET'])
 def get_image(filename):
+    # Cek dulu di folder processed, kalau tidak ada baru cari di uploads
+    if os.path.exists(os.path.join('processed', filename)):
+        return send_from_directory('processed', filename)
     return send_from_directory('uploads', filename)
