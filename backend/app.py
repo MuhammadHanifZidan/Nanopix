@@ -12,6 +12,8 @@ from routes.restoration import restoration_bp
 from routes.edge import edge_bp
 from routes.color_processing import color_processing_bp
 from routes.segmentation import segmentation_bp
+from routes.compression import compression_bp
+from routes.histogram import histogram_bp
 
 # Init app
 app = Flask(__name__)
@@ -33,7 +35,8 @@ app.register_blueprint(restoration_bp)
 app.register_blueprint(edge_bp)
 app.register_blueprint(color_processing_bp)
 app.register_blueprint(segmentation_bp)
-
+app.register_blueprint(compression_bp)
+app.register_blueprint(histogram_bp)
 
 # Run server
 if __name__ == '__main__':
