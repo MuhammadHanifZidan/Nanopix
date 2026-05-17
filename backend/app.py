@@ -9,6 +9,8 @@ from routes.color import color_bp
 from routes.transform import transform_bp
 from routes.enhancement import enhancement_bp
 from routes.restoration import restoration_bp
+from routes.edge import edge_bp
+from routes.color_processing import color_processing_bp
 #from routes.enhancement import enhancement_bp
 
 # Init app
@@ -28,6 +30,8 @@ app.register_blueprint(color_bp)
 app.register_blueprint(transform_bp)
 app.register_blueprint(enhancement_bp)
 app.register_blueprint(restoration_bp)
+app.register_blueprint(edge_bp)
+app.register_blueprint(color_processing_bp)
 
 
 # Run server
