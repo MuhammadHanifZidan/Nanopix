@@ -1,0 +1,310 @@
+from flask import Blueprint, request, jsonify, send_from_directory
+import cv2
+import numpy as np
+import os
+import uuid
+
+compression_bp = Blueprint('compression', __name__)
+
+UPLOAD_FOLDER = 'uploads'
+PROCESSED_FOLDER = 'processed'
+
+
+def load_image(filename):
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        return None
+    return cv2.imread(path)
+
+
+def save_processed(img, ext='jpg', params=None):
+    out_filename = f"{uuid.uuid4().hex}.{ext}"
+    out_path = os.path.join(PROCESSED_FOLDER, out_filename)
+    if params:
+        cv2.imwrite(out_path, img, params)
+    else:
+        cv2.imwrite(out_path, img)
+    return out_filename, out_path
+
+
+def get_file_size(path):
+    return os.path.getsize(path)
+
+
+# ── JPEG Quality Compression ──────────────────────────────────────────────────
+# Metode: Kuantisasi (DCT + quantization table)
+# OpenCV handle DCT & quantization table secara internal via quality parameter
+
+@compression_bp.route('/api/process/compress/jpeg', methods=['POST'])
+def compress_jpeg():
+    data = request.get_json()
+    filename = data.get('filename')
+    quality = data.get('quality', 85)  # 1–100, makin kecil makin terkompresi
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    quality = max(1, min(int(quality), 100))
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    orig_path = os.path.join(UPLOAD_FOLDER, filename)
+    orig_size = get_file_size(orig_path)
+
+    out_filename, out_path = save_processed(
+        img, 'jpg', [cv2.IMWRITE_JPEG_QUALITY, quality]
+    )
+    comp_size = get_file_size(out_path)
+
+    return jsonify({
+        'message': 'JPEG compression berhasil',
+        'filename': out_filename,
+        'method': 'Kuantisasi DCT',
+        'quality': quality,
+        'original_size_bytes': orig_size,
+        'compressed_size_bytes': comp_size,
+        'ratio': round(orig_size / comp_size, 2) if comp_size > 0 else 0
+    })
+
+
+# ── PNG Lossless Compression ──────────────────────────────────────────────────
+# Metode: LZW (via DEFLATE yang dipakai PNG)
+
+@compression_bp.route('/api/process/compress/png', methods=['POST'])
+def compress_png():
+    data = request.get_json()
+    filename = data.get('filename')
+    # compression level 0–9 (0 = no compression, 9 = max)
+    level = data.get('level', 6)
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    level = max(0, min(int(level), 9))
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    orig_path = os.path.join(UPLOAD_FOLDER, filename)
+    orig_size = get_file_size(orig_path)
+
+    out_filename, out_path = save_processed(
+        img, 'png', [cv2.IMWRITE_PNG_COMPRESSION, level]
+    )
+    comp_size = get_file_size(out_path)
+
+    return jsonify({
+        'message': 'PNG compression berhasil',
+        'filename': out_filename,
+        'method': 'LZW (DEFLATE)',
+        'level': level,
+        'original_size_bytes': orig_size,
+        'compressed_size_bytes': comp_size,
+        'ratio': round(orig_size / comp_size, 2) if comp_size > 0 else 0
+    })
+
+
+# ── RLE Compression ───────────────────────────────────────────────────────────
+# Metode: Run-Length Encoding manual pada channel grayscale
+
+@compression_bp.route('/api/process/compress/rle', methods=['POST'])
+def compress_rle():
+    data = request.get_json()
+    filename = data.get('filename')
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    orig_path = os.path.join(UPLOAD_FOLDER, filename)
+    orig_size = get_file_size(orig_path)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    flat = gray.flatten()
+
+    # encode: list of (value, count) pairs
+    encoded = []
+    count = 1
+    for i in range(1, len(flat)):
+        if flat[i] == flat[i - 1]:
+            count += 1
+        else:
+            encoded.append((int(flat[i - 1]), count))
+            count = 1
+    encoded.append((int(flat[-1]), count))
+
+    # decode balik ke array untuk disimpan sebagai gambar
+    decoded = np.array(
+        [val for val, cnt in encoded for _ in range(cnt)],
+        dtype=np.uint8
+    ).reshape(gray.shape)
+
+    result = cv2.cvtColor(decoded, cv2.COLOR_GRAY2BGR)
+    out_filename, out_path = save_processed(result, 'png')
+    comp_size = get_file_size(out_path)
+
+    # hitung ukuran data RLE (2 bytes per pair: 1 value + 1 count, cap 255)
+    rle_bytes = len(encoded) * 2
+
+    return jsonify({
+        'message': 'RLE compression berhasil',
+        'filename': out_filename,
+        'method': 'Run-Length Encoding',
+        'original_pixels': int(flat.size),
+        'rle_pairs': len(encoded),
+        'rle_size_bytes': rle_bytes,
+        'original_size_bytes': orig_size,
+        'compressed_size_bytes': comp_size,
+        'ratio': round(flat.size / len(encoded), 2)
+    })
+
+
+# ── Huffman Compression ───────────────────────────────────────────────────────
+# Metode: Huffman coding manual pada grayscale pixel values
+
+@compression_bp.route('/api/process/compress/huffman', methods=['POST'])
+def compress_huffman():
+    data = request.get_json()
+    filename = data.get('filename')
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    orig_path = os.path.join(UPLOAD_FOLDER, filename)
+    orig_size = get_file_size(orig_path)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    flat = gray.flatten()
+
+    # hitung frekuensi tiap nilai pixel
+    freq = {}
+    for val in flat:
+        freq[int(val)] = freq.get(int(val), 0) + 1
+
+    # build huffman tree pakai list of [freq, symbol]
+    # node: [frekuensi, simbol_atau_None, left, right]
+    heap = [[f, s, None, None] for s, f in freq.items()]
+    heap.sort(key=lambda x: x[0])
+
+    while len(heap) > 1:
+        lo = heap.pop(0)
+        hi = heap.pop(0)
+        merged = [lo[0] + hi[0], None, lo, hi]
+        # insert sorted
+        inserted = False
+        for i, node in enumerate(heap):
+            if merged[0] <= node[0]:
+                heap.insert(i, merged)
+                inserted = True
+                break
+        if not inserted:
+            heap.append(merged)
+
+    # generate kode huffman dari tree
+    codes = {}
+    def generate_codes(node, code=''):
+        if node is None:
+            return
+        if node[1] is not None:  # leaf node
+            codes[node[1]] = code if code else '0'
+            return
+        generate_codes(node[2], code + '0')
+        generate_codes(node[3], code + '1')
+
+    if heap:
+        generate_codes(heap[0])
+
+    # hitung total bits hasil huffman vs original
+    original_bits = len(flat) * 8
+    compressed_bits = sum(len(codes.get(int(p), '0')) for p in flat)
+    compression_ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
+
+    # simpan gambar grayscale sebagai output visual
+    result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    out_filename, out_path = save_processed(result, 'png')
+    comp_size = get_file_size(out_path)
+
+    # ambil sample kode huffman (10 simbol terpendek)
+    sample_codes = dict(
+        sorted(codes.items(), key=lambda x: len(x[1]))[:10]
+    )
+
+    return jsonify({
+        'message': 'Huffman compression berhasil',
+        'filename': out_filename,
+        'method': 'Huffman Coding',
+        'original_bits': original_bits,
+        'compressed_bits': compressed_bits,
+        'compression_ratio': compression_ratio,
+        'unique_symbols': len(freq),
+        'original_size_bytes': orig_size,
+        'compressed_size_bytes': comp_size,
+        'sample_codes': sample_codes  # contoh kode huffman untuk 10 simbol
+    })
+
+
+# ── Arithmetic Compression (simulasi) ────────────────────────────────────────
+# Metode: Arithmetic coding — hitung entropy & estimasi ukuran terkompresi
+
+@compression_bp.route('/api/process/compress/arithmetic', methods=['POST'])
+def compress_arithmetic():
+    data = request.get_json()
+    filename = data.get('filename')
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    orig_path = os.path.join(UPLOAD_FOLDER, filename)
+    orig_size = get_file_size(orig_path)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    flat = gray.flatten().astype(np.float32)
+    total = len(flat)
+
+    # hitung probabilitas tiap simbol
+    vals, counts = np.unique(flat, return_counts=True)
+    probs = counts / total
+
+    # hitung entropy Shannon: H = -sum(p * log2(p))
+    entropy = -np.sum(probs * np.log2(probs + 1e-10))
+
+    # arithmetic coding secara teoritis bisa mencapai entropy limit
+    compressed_bits = int(entropy * total)
+    original_bits = total * 8
+    ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
+
+    # simpan gambar grayscale sebagai output visual
+    result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    out_filename, out_path = save_processed(result, 'png')
+    comp_size = get_file_size(out_path)
+
+    return jsonify({
+        'message': 'Arithmetic compression (simulasi) berhasil',
+        'filename': out_filename,
+        'method': 'Arithmetic Coding',
+        'entropy_bits_per_pixel': round(float(entropy), 4),
+        'original_bits': int(original_bits),
+        'theoretical_compressed_bits': compressed_bits,
+        'compression_ratio': ratio,
+        'original_size_bytes': orig_size,
+        'compressed_size_bytes': comp_size,
+    })
+
+
+@compression_bp.route('/api/processed/<filename>', methods=['GET'])
+def get_processed(filename):
+    return send_from_directory(PROCESSED_FOLDER, filename)
