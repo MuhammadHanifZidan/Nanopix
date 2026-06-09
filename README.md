@@ -44,7 +44,7 @@ Aplikasi ini dibangun menggunakan arsitektur *Decoupled*:
 
 Proyek ini dikembangkan oleh:
 1. **[Muhammad Hanif Zidan]** - [2407411050/Backend Developer]
-2. **[Muhammad Reza Arifin]** - [24074110/Frontend Developer]
+2. **[Muhammad Reza Arifin]** - [2407411056/Frontend Developer]
 
 **Dosen Pengampu**: Rizki Elisa Nalawati, S.T., M.T.
 
