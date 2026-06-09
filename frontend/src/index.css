@@ -4,13 +4,11 @@
   --font-mono: "Space Mono", monospace;
 
   /* Palette Biru Gelap Retro */
-  --color-cli-bg: #000000;      /* Background utama tetap hitam agar kontras */
-  --color-cli-panel: #000022;   /* Panel sedikit kebiruan sangat gelap */
-  --color-cli-border: #000055;  /* Garis batas biru */
+  --color-cli-bg: #000000;      
+  --color-cli-panel: #000022;   
+  --color-cli-border: #000055;  
   --color-cli-text: #e5e5e5;    
   --color-cli-dim: #444477;     
-  
-  /* Ini adalah warna BIRU SPESIFIK yang akan jadi aksen tombol & garis */
   --color-cli-accent: #0000AA;  
 }
 
@@ -20,29 +18,43 @@ body {
   font-family: var(--font-mono);
   overflow: hidden;
   text-transform: uppercase;
+  font-size: 0.875rem; 
 }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-cli-bg);
-  border-left: 1px solid var(--color-cli-border);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-cli-dim);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-cli-accent);
+/* MEMATIKAN TRANSISI MULUS AGAR TERASA SEPERTI CLI JADUL */
+*, button, a, select, input {
+  transition: all 0s !important;
 }
 
-@keyframes scandown {
-  0% { top: -10%; opacity: 0.6; }
-  50% { opacity: 0.1; }
-  100% { top: 110%; opacity: 0.6; }
+/* ANIMASI KURSOR BERKEDIP */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-blink {
+  animation: blink 1s step-end infinite;
 }
 
-.animate-scandown {
-  animation: scandown 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+/* ANIMASI SCANLINE & EFEK LAYAR CRT */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
 }
+.crt-screen {
+  position: relative;
+  overflow: hidden;
+}
+.crt-background {
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* SCROLLBAR RETRO */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-cli-bg); border-left: 1px solid var(--color-cli-border); }
+::-webkit-scrollbar-thumb { background: var(--color-cli-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-cli-accent); }
