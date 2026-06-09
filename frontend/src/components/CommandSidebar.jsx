@@ -44,9 +44,13 @@ export default function CommandSidebar({ activeTool, handleSelectTool, isRebuild
   }, {});
 
   return (
-    <aside 
-      className={`${isCollapsed ? 'w-20' : 'w-[280px]'} flex-shrink-0 border-r border-cli-border flex flex-col bg-cli-bg relative z-20 transition-all duration-300 ease-in-out`}
-    >
+    <aside
+  className={`${isCollapsed ? 'w-20' : 'w-[280px]'} flex-shrink-0 border-r border-cli-border flex flex-col relative z-20 transition-all duration-300 ease-in-out backdrop-blur-md`}
+  style={{
+    background: "rgba(7,17,29,.85)",
+    boxShadow: "0 0 30px rgba(0,229,255,.06)"
+  }}
+>
       {/* HEADER & TOGGLE */}
       <div className="p-3 border-b border-cli-border flex justify-between items-center bg-cli-panel h-14">
         {!isCollapsed && <span className="text-xs text-cli-accent font-bold tracking-widest">EFFECTS</span>}

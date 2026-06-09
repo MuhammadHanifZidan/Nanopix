@@ -4,14 +4,39 @@
   --font-mono: "Space Mono", monospace;
 
   /* Palette Biru Gelap Retro */
-  --color-cli-bg: #000000;      
-  --color-cli-panel: #000022;   
-  --color-cli-border: #000055;  
+  --color-cli-bg: #05070a;     
+  --color-cli-panel: #07111d;    
+  --color-cli-border: #12304a;  
   --color-cli-text: #e5e5e5;    
   --color-cli-dim: #444477;     
-  --color-cli-accent: #0000AA;  
+  --color-cli-accent: #00e5ff;
 }
 
+.workspace-grid {
+  background-image:
+    radial-gradient(
+      rgba(0,229,255,0.12) 1px,
+      transparent 1px
+    );
+
+  background-size: 24px 24px;
+}
+
+body::before {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(0,229,255,0.08),
+      transparent 60%
+    );
+
+  pointer-events: none;
+}
 body {
   background-color: var(--color-cli-bg);
   color: var(--color-cli-text);
@@ -46,15 +71,82 @@ body {
 }
 .crt-background {
   position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px;
-  z-index: 1;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      rgba(255,255,255,0.015) 50%,
+      rgba(0,0,0,0.04) 50%
+    );
+
+  background-size: 100% 3px;
+
   pointer-events: none;
+  opacity: 0.35;
 }
 
 /* SCROLLBAR RETRO */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--color-cli-bg); border-left: 1px solid var(--color-cli-border); }
-::-webkit-scrollbar-thumb { background: var(--color-cli-dim); }
+::-webkit-scrollbar-thumb {
+  background: #1f4c6b;
+  border-radius: 999px;
+}
+.glow-accent {
+  box-shadow:
+    0 0 10px rgba(0,229,255,.35),
+    0 0 20px rgba(0,229,255,.15);
+}
+
+@keyframes zoomIndicatorIn {
+  from {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+}
+
+@keyframes zoomIndicatorOut {
+  from {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(0.9);
+  }
+}
+
+.zoom-indicator-enter {
+  animation:
+    zoomIndicatorIn
+    0.15s
+    ease-out
+    forwards;
+}
+
+.zoom-indicator-exit {
+  animation:
+    zoomIndicatorOut
+    0.2s
+    ease-in
+    forwards;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cli-accent);
+}
 ::-webkit-scrollbar-thumb:hover { background: var(--color-cli-accent); }

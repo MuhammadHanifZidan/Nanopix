@@ -6,7 +6,13 @@ export default function InspectorSidebar({
   layers, handleToggleLayer, handleDeleteLayer, currentActiveImageUrl, logs, logEndRef
 }) {
   return (
-    <aside className="w-80 flex-shrink-0 border-l border-cli-border flex flex-col bg-cli-panel relative z-20">
+   <aside
+  className="w-80 flex-shrink-0 border-l border-cli-border flex flex-col relative z-20 backdrop-blur-md"
+  style={{
+    background: "rgba(7,17,29,.85)",
+    boxShadow: "0 0 30px rgba(0,229,255,.06)"
+  }}
+>
       <div className="p-3 border-b border-cli-border text-xs text-cli-accent font-bold">INSPECTOR</div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col">
         
