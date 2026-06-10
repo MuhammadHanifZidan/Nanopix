@@ -80,6 +80,78 @@ def brightness_contrast():
     })
 
 
+# --- TAMBAHAN FITUR HSV DI SINI ---
+@color_bp.route('/api/process/hsv', methods=['POST'])
+def hsv_adjustment():
+    data = request.get_json()
+    filename = data.get('filename')
+    
+    # Ambil nilai dari frontend (slider)
+    hue_shift = float(data.get('hue', 0))
+    sat_shift = float(data.get('saturation', 0))
+    val_shift = float(data.get('value', 0))
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    # 1. Konversi ke HSV (gunakan float32 agar tidak ada nilai yang terpotong saat dihitung)
+    hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float32)
+
+    # 2. Modifikasi Hue (OpenCV membatasi Hue dari 0 hingga 179)
+    hsv_img[:, :, 0] = (hsv_img[:, :, 0] + (hue_shift / 2.0)) % 180
+
+    # 3. Modifikasi Saturation (Skala frontend -100 ke 100 diubah jadi -255 ke 255)
+    hsv_img[:, :, 1] += (sat_shift / 100.0) * 255
+    hsv_img[:, :, 1] = np.clip(hsv_img[:, :, 1], 0, 255)
+
+    # 4. Modifikasi Value (Kecerahan)
+    hsv_img[:, :, 2] += (val_shift / 100.0) * 255
+    hsv_img[:, :, 2] = np.clip(hsv_img[:, :, 2], 0, 255)
+
+    # 5. Kembalikan tipe data ke uint8 dan konversi kembali ke BGR
+    hsv_img = hsv_img.astype(np.uint8)
+    result = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2BGR)
+
+    ext = filename.rsplit('.', 1)[-1]
+    out_filename = save_processed(result, ext)
+
+    return jsonify({
+        'message': 'HSV berhasil diterapkan',
+        'filename': out_filename
+    })
+# -----------------------------------
+@color_bp.route('/api/process/compress', methods=['POST'])
+def compress_image():
+    data = request.get_json()
+    filename = data.get('filename')
+    
+    # Ambil nilai kualitas dari slider frontend (1 - 100)
+    quality = int(data.get('quality', 50))
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    # Fitur kompresi kualitas ini spesifik untuk format JPEG
+    out_filename = f"{uuid.uuid4().hex}.jpg"
+    out_path = os.path.join(PROCESSED_FOLDER, out_filename)
+
+    # Simpan menggunakan parameter kualitas dari OpenCV
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+    cv2.imwrite(out_path, img, encode_param)
+
+    return jsonify({
+        'message': 'Compress berhasil diterapkan',
+        'filename': out_filename
+    })
+
 @color_bp.route('/api/processed/<filename>', methods=['GET'])
 def get_processed(filename):
     return send_from_directory(PROCESSED_FOLDER, filename)

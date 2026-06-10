@@ -15,6 +15,7 @@ const getEffectStyle = (id) => {
     case 'histeq': return { filter: 'saturate(200%) contrast(120%) brightness(110%)' };
     case 'threshold': return { filter: 'contrast(1000%) grayscale(100%)' };
     case 'canny': 
+    case 'hsv': return { filter: 'hue-rotate(90deg) saturate(200%)' };
     case 'sobel':
     case 'prewitt':
     case 'robert':

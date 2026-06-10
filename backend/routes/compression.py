@@ -107,9 +107,7 @@ def compress_png():
     })
 
 
-# ── RLE Compression ───────────────────────────────────────────────────────────
-# Metode: Run-Length Encoding manual pada channel grayscale
-
+# ── RLE Compression (RGB) ───────────────────────────────────────────────────────────
 @compression_bp.route('/api/process/compress/rle', methods=['POST'])
 def compress_rle():
     data = request.get_json()
@@ -125,49 +123,59 @@ def compress_rle():
     orig_path = os.path.join(UPLOAD_FOLDER, filename)
     orig_size = get_file_size(orig_path)
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    flat = gray.flatten()
+    # Pisahkan channel B, G, R agar RLE lebih optimal menemukan deret kembar
+    b, g, r = cv2.split(img)
 
-    # encode: list of (value, count) pairs
-    encoded = []
-    count = 1
-    for i in range(1, len(flat)):
-        if flat[i] == flat[i - 1]:
-            count += 1
-        else:
-            encoded.append((int(flat[i - 1]), count))
-            count = 1
-    encoded.append((int(flat[-1]), count))
+    def encode_rle(channel):
+        flat = channel.flatten()
+        encoded = []
+        count = 1
+        for i in range(1, len(flat)):
+            if flat[i] == flat[i - 1]:
+                count += 1
+            else:
+                encoded.append((int(flat[i - 1]), count))
+                count = 1
+        encoded.append((int(flat[-1]), count))
+        return encoded, flat.size
 
-    # decode balik ke array untuk disimpan sebagai gambar
-    decoded = np.array(
-        [val for val, cnt in encoded for _ in range(cnt)],
-        dtype=np.uint8
-    ).reshape(gray.shape)
+    # Encode tiap channel
+    enc_b, size_b = encode_rle(b)
+    enc_g, size_g = encode_rle(g)
+    enc_r, size_r = encode_rle(r)
 
-    result = cv2.cvtColor(decoded, cv2.COLOR_GRAY2BGR)
+    # Decode balik ke array
+    def decode_rle(encoded, shape):
+        return np.array([val for val, cnt in encoded for _ in range(cnt)], dtype=np.uint8).reshape(shape)
+
+    dec_b = decode_rle(enc_b, b.shape)
+    dec_g = decode_rle(enc_g, g.shape)
+    dec_r = decode_rle(enc_r, r.shape)
+
+    # Gabungkan kembali menjadi gambar berwarna
+    result = cv2.merge([dec_b, dec_g, dec_r])
+    
     out_filename, out_path = save_processed(result, 'png')
     comp_size = get_file_size(out_path)
 
-    # hitung ukuran data RLE (2 bytes per pair: 1 value + 1 count, cap 255)
-    rle_bytes = len(encoded) * 2
+    total_pairs = len(enc_b) + len(enc_g) + len(enc_r)
+    total_pixels = size_b + size_g + size_r
+    rle_bytes = total_pairs * 2
 
     return jsonify({
-        'message': 'RLE compression berhasil',
+        'message': 'RLE RGB compression berhasil',
         'filename': out_filename,
-        'method': 'Run-Length Encoding',
-        'original_pixels': int(flat.size),
-        'rle_pairs': len(encoded),
+        'method': 'Run-Length Encoding (RGB)',
+        'original_pixels': int(total_pixels),
+        'rle_pairs': total_pairs,
         'rle_size_bytes': rle_bytes,
         'original_size_bytes': orig_size,
         'compressed_size_bytes': comp_size,
-        'ratio': round(flat.size / len(encoded), 2)
+        'ratio': round(total_pixels / total_pairs, 2) if total_pairs > 0 else 0
     })
 
 
-# ── Huffman Compression ───────────────────────────────────────────────────────
-# Metode: Huffman coding manual pada grayscale pixel values
-
+# ── Huffman Compression (RGB) ───────────────────────────────────────────────────────
 @compression_bp.route('/api/process/compress/huffman', methods=['POST'])
 def compress_huffman():
     data = request.get_json()
@@ -183,16 +191,14 @@ def compress_huffman():
     orig_path = os.path.join(UPLOAD_FOLDER, filename)
     orig_size = get_file_size(orig_path)
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    flat = gray.flatten()
+    # Langsung flatten gambar 3 channel
+    flat = img.flatten()
 
     # hitung frekuensi tiap nilai pixel
     freq = {}
     for val in flat:
         freq[int(val)] = freq.get(int(val), 0) + 1
 
-    # build huffman tree pakai list of [freq, symbol]
-    # node: [frekuensi, simbol_atau_None, left, right]
     heap = [[f, s, None, None] for s, f in freq.items()]
     heap.sort(key=lambda x: x[0])
 
@@ -200,7 +206,6 @@ def compress_huffman():
         lo = heap.pop(0)
         hi = heap.pop(0)
         merged = [lo[0] + hi[0], None, lo, hi]
-        # insert sorted
         inserted = False
         for i, node in enumerate(heap):
             if merged[0] <= node[0]:
@@ -210,12 +215,11 @@ def compress_huffman():
         if not inserted:
             heap.append(merged)
 
-    # generate kode huffman dari tree
     codes = {}
     def generate_codes(node, code=''):
         if node is None:
             return
-        if node[1] is not None:  # leaf node
+        if node[1] is not None:
             codes[node[1]] = code if code else '0'
             return
         generate_codes(node[2], code + '0')
@@ -224,38 +228,31 @@ def compress_huffman():
     if heap:
         generate_codes(heap[0])
 
-    # hitung total bits hasil huffman vs original
     original_bits = len(flat) * 8
     compressed_bits = sum(len(codes.get(int(p), '0')) for p in flat)
     compression_ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
 
-    # simpan gambar grayscale sebagai output visual
-    result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-    out_filename, out_path = save_processed(result, 'png')
+    # Simpan langsung gambar aslinya (RGB)
+    out_filename, out_path = save_processed(img, 'png')
     comp_size = get_file_size(out_path)
 
-    # ambil sample kode huffman (10 simbol terpendek)
-    sample_codes = dict(
-        sorted(codes.items(), key=lambda x: len(x[1]))[:10]
-    )
+    sample_codes = dict(sorted(codes.items(), key=lambda x: len(x[1]))[:10])
 
     return jsonify({
-        'message': 'Huffman compression berhasil',
+        'message': 'Huffman RGB compression berhasil',
         'filename': out_filename,
-        'method': 'Huffman Coding',
+        'method': 'Huffman Coding (RGB)',
         'original_bits': original_bits,
         'compressed_bits': compressed_bits,
         'compression_ratio': compression_ratio,
         'unique_symbols': len(freq),
         'original_size_bytes': orig_size,
         'compressed_size_bytes': comp_size,
-        'sample_codes': sample_codes  # contoh kode huffman untuk 10 simbol
+        'sample_codes': sample_codes
     })
 
 
-# ── Arithmetic Compression (simulasi) ────────────────────────────────────────
-# Metode: Arithmetic coding — hitung entropy & estimasi ukuran terkompresi
-
+# ── Arithmetic Compression (simulasi RGB) ────────────────────────────────────────
 @compression_bp.route('/api/process/compress/arithmetic', methods=['POST'])
 def compress_arithmetic():
     data = request.get_json()
@@ -271,31 +268,27 @@ def compress_arithmetic():
     orig_path = os.path.join(UPLOAD_FOLDER, filename)
     orig_size = get_file_size(orig_path)
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    flat = gray.flatten().astype(np.float32)
+    # Langsung flatten gambar 3 channel
+    flat = img.flatten().astype(np.float32)
     total = len(flat)
 
-    # hitung probabilitas tiap simbol
     vals, counts = np.unique(flat, return_counts=True)
     probs = counts / total
 
-    # hitung entropy Shannon: H = -sum(p * log2(p))
     entropy = -np.sum(probs * np.log2(probs + 1e-10))
 
-    # arithmetic coding secara teoritis bisa mencapai entropy limit
     compressed_bits = int(entropy * total)
     original_bits = total * 8
     ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
 
-    # simpan gambar grayscale sebagai output visual
-    result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-    out_filename, out_path = save_processed(result, 'png')
+    # Simpan langsung gambar aslinya (RGB)
+    out_filename, out_path = save_processed(img, 'png')
     comp_size = get_file_size(out_path)
 
     return jsonify({
-        'message': 'Arithmetic compression (simulasi) berhasil',
+        'message': 'Arithmetic RGB compression berhasil',
         'filename': out_filename,
-        'method': 'Arithmetic Coding',
+        'method': 'Arithmetic Coding (RGB)',
         'entropy_bits_per_pixel': round(float(entropy), 4),
         'original_bits': int(original_bits),
         'theoretical_compressed_bits': compressed_bits,

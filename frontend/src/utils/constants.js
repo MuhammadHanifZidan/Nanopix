@@ -6,6 +6,11 @@ export const TOOL_CATEGORIES = {
     { id: 'brightness-contrast', label: 'Bright/Contrast', endpoint: 'brightness-contrast', params: [
       { id: 'brightness', label: 'Brightness', type: 'range', min: -100, max: 100, default: 0 },
       { id: 'contrast', label: 'Contrast', type: 'range', min: -100, max: 100, default: 0 }
+    ]},
+    { id: 'hsv', label: 'Hue/Sat/Val', endpoint: 'hsv', params: [
+      { id: 'hue', label: 'Hue', type: 'range', min: -180, max: 180, default: 0 },
+      { id: 'saturation', label: 'Saturation', type: 'range', min: -100, max: 100, default: 0 },
+      { id: 'value', label: 'Value', type: 'range', min: -100, max: 100, default: 0 }
     ]}
   ],
   TRANSFORM: [
@@ -19,6 +24,15 @@ export const TOOL_CATEGORIES = {
     { id: 'smooth', label: 'Smooth', endpoint: 'smooth', params: [ { id: 'intensity', label: 'Intensity', type: 'range', min: 0, max: 100, default: 50 } ]},
     { id: 'histeq', label: 'Hist. Equalize', endpoint: 'histeq', params: []}
   ],
+  // --- KATEGORI BARU SESUAI BACKEND compress.py ---
+  COMPRESSION: [
+    { id: 'comp_jpeg', label: 'JPEG Compress', endpoint: 'compress/jpeg', params: [ { id: 'quality', label: 'Quality', type: 'range', min: 1, max: 100, default: 85 } ]},
+    { id: 'comp_png', label: 'PNG Lossless', endpoint: 'compress/png', params: [ { id: 'level', label: 'Level', type: 'range', min: 0, max: 9, default: 6 } ]},
+    { id: 'comp_rle', label: 'RLE Encode', endpoint: 'compress/rle', params: []},
+    { id: 'comp_huffman', label: 'Huffman Code', endpoint: 'compress/huffman', params: []},
+    { id: 'comp_arithmetic', label: 'Arithmetic', endpoint: 'compress/arithmetic', params: []}
+  ],
+  // ------------------------------------------------
   EDGE: [
     { id: 'threshold', label: 'Threshold', endpoint: 'threshold', params: [ { id: 'thresh_value', label: 'Value', type: 'range', min: 0, max: 255, default: 127 }, { id: 'mode', label: 'Mode', type: 'select', options: ['binary', 'binary_inv', 'otsu'], default: 'binary' } ]},
     { id: 'canny', label: 'Canny Edge', endpoint: 'edge/canny', params: [ { id: 'threshold1', label: 'Thresh 1', type: 'range', min: 0, max: 255, default: 100 }, { id: 'threshold2', label: 'Thresh 2', type: 'range', min: 0, max: 255, default: 200 } ]},
