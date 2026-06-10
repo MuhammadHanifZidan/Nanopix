@@ -114,11 +114,9 @@ def compress_rle():
 
     b, g, r = cv2.split(img)
 
-    # OPTIMISASI: Menggunakan NumPy Vectorization (Bukan looping manual)
     def get_rle_pairs_count(channel):
         flat = channel.flatten()
         if flat.size == 0: return 0
-        # np.diff() mencari letak nilai yang berubah secara instan di level C
         changes = np.where(flat[:-1] != flat[1:])[0]
         return len(changes) + 1
 
@@ -130,11 +128,9 @@ def compress_rle():
     total_pixels = img.size
     rle_bytes = total_pairs * 2
 
-    # OPTIMISASI: RLE adalah Lossless. Gambar output = Gambar Input.
-    # Tidak perlu repot-repot men-decode array kembali. Langsung simpan input aslinya!
-    out_filename, out_path = save_processed(img, 'png')
-    comp_size = get_file_size(out_path)
-
+    # PERBAIKAN: Paksa PNG agar ukuran file fisiknya ikut mengecil
+    out_filename, out_path = save_processed(img, 'png', [cv2.IMWRITE_PNG_COMPRESSION, 9])
+    
     return jsonify({
         'message': 'RLE RGB compression berhasil',
         'filename': out_filename,
@@ -143,7 +139,7 @@ def compress_rle():
         'rle_pairs': int(total_pairs),
         'rle_size_bytes': int(rle_bytes),
         'original_size_bytes': orig_size,
-        'compressed_size_bytes': comp_size,
+        'compressed_size_bytes': int(rle_bytes), # Ini sudah benar
         'ratio': round(total_pixels / total_pairs, 2) if total_pairs > 0 else 0
     })
 
@@ -166,11 +162,9 @@ def compress_huffman():
 
     flat = img.flatten()
 
-    # OPTIMISASI 1: Hitung frekuensi pakai NumPy (Sangat cepat)
     vals, counts = np.unique(flat, return_counts=True)
     freq = dict(zip(vals, counts))
 
-    # OPTIMISASI 2: Build Huffman Tree menggunakan library heapq
     heap = [[weight, [symbol, ""]] for symbol, weight in freq.items()]
     heapq.heapify(heap)
 
@@ -185,16 +179,13 @@ def compress_huffman():
 
     codes = {pair[0]: pair[1] for pair in heap[0][1:]} if heap else {}
 
-    # OPTIMISASI 3: Hitung total bits matematis, JANGAN dilooping per pixel!
     original_bits = len(flat) * 8
     compressed_bits = sum(freq[sym] * len(code) for sym, code in codes.items())
     compression_ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
 
-    # Simpan langsung gambar aslinya (Lossless visual)
-    out_filename, out_path = save_processed(img, 'png')
-    comp_size = get_file_size(out_path)
-
-    # Konversi key numpy ke integer biasa agar aman di JSON
+    # PERBAIKAN: Paksa PNG agar ukuran file fisiknya ikut mengecil
+    out_filename, out_path = save_processed(img, 'png', [cv2.IMWRITE_PNG_COMPRESSION, 9])
+    
     sample_codes = dict(sorted(codes.items(), key=lambda x: len(x[1]))[:10])
     sample_codes = {int(k): str(v) for k, v in sample_codes.items()}
 
@@ -207,7 +198,7 @@ def compress_huffman():
         'compression_ratio': compression_ratio,
         'unique_symbols': len(freq),
         'original_size_bytes': orig_size,
-        'compressed_size_bytes': comp_size,
+        'compressed_size_bytes': int(compressed_bits / 8), # PERBAIKAN: Dibagi 8 agar jadi Bytes
         'sample_codes': sample_codes
     })
 
@@ -240,8 +231,8 @@ def compress_arithmetic():
     original_bits = total * 8
     ratio = round(original_bits / compressed_bits, 2) if compressed_bits > 0 else 0
 
-    out_filename, out_path = save_processed(img, 'png')
-    comp_size = get_file_size(out_path)
+    # PERBAIKAN: Paksa PNG agar ukuran file fisiknya ikut mengecil
+    out_filename, out_path = save_processed(img, 'png', [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
     return jsonify({
         'message': 'Arithmetic RGB compression berhasil',
@@ -252,7 +243,7 @@ def compress_arithmetic():
         'theoretical_compressed_bits': compressed_bits,
         'compression_ratio': ratio,
         'original_size_bytes': orig_size,
-        'compressed_size_bytes': comp_size,
+        'compressed_size_bytes': int(compressed_bits / 8), # PERBAIKAN: Pakai compressed_bits dan dibagi 8
     })
 
 
