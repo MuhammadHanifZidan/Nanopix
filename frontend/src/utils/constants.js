@@ -11,6 +11,9 @@ export const TOOL_CATEGORIES = {
       { id: 'hue', label: 'Hue', type: 'range', min: -180, max: 180, default: 0 },
       { id: 'saturation', label: 'Saturation', type: 'range', min: -100, max: 100, default: 0 },
       { id: 'value', label: 'Value', type: 'range', min: -100, max: 100, default: 0 }
+    ]},
+    { id: 'split-channel', label: 'Channel Split', endpoint: 'split-channel', params: [ 
+      { id: 'channel', label: 'Channel', type: 'select', options: ['red', 'green', 'blue'], default: 'red' } 
     ]}
   ],
   TRANSFORM: [
@@ -24,6 +27,19 @@ export const TOOL_CATEGORIES = {
     { id: 'smooth', label: 'Smooth', endpoint: 'smooth', params: [ { id: 'intensity', label: 'Intensity', type: 'range', min: 0, max: 100, default: 50 } ]},
     { id: 'histeq', label: 'Hist. Equalize', endpoint: 'histeq', params: []}
   ],
+  // --- KATEGORI RESTORATION ---
+  RESTORATION: [
+    { id: 'rest_gaussian', label: 'Gaussian Blur', endpoint: 'gaussian-blur', params: [ 
+      { id: 'kernel_size', label: 'Kernel Size', type: 'range', min: 1, max: 51, step: 2, default: 5 } 
+    ]},
+    { id: 'rest_median', label: 'Median Filter', endpoint: 'median-filter', params: [ 
+      { id: 'kernel_size', label: 'Kernel Size', type: 'range', min: 3, max: 51, step: 2, default: 5 } 
+    ]},
+    { id: 'rest_saltpepper', label: 'Salt & Pepper', endpoint: 'denoise-saltpepper', params: [ 
+      { id: 'strength', label: 'Strength', type: 'select', options: ['low', 'medium', 'high'], default: 'medium' } 
+    ]}
+  ],
+  // -----------------------------
   // --- KATEGORI BARU SESUAI BACKEND compress.py ---
   COMPRESSION: [
     { id: 'comp_jpeg', label: 'JPEG Compress', endpoint: 'compress/jpeg', params: [ { id: 'quality', label: 'Quality', type: 'range', min: 1, max: 100, default: 85 } ]},
@@ -47,6 +63,9 @@ export const TOOL_CATEGORIES = {
     { id: 'seg_threshold', label: 'Threshold Seg.', endpoint: 'segment/threshold', params: [ { id: 'thresh_value', label: 'Value', type: 'range', min: 0, max: 255, default: 127 }, { id: 'mode', label: 'Mode', type: 'select', options: ['manual', 'otsu'], default: 'otsu' } ]},
     { id: 'seg_edge', label: 'Edge Seg.', endpoint: 'segment/edge', params: [ { id: 'threshold1', label: 'Thresh 1', type: 'range', min: 0, max: 255, default: 50 }, { id: 'threshold2', label: 'Thresh 2', type: 'range', min: 0, max: 255, default: 150 } ]},
     { id: 'seg_region', label: 'Region/K-Means', endpoint: 'segment/region', params: [ { id: 'n_clusters', label: 'Clusters', type: 'range', min: 2, max: 8, default: 3 }, { id: 'min_area', label: 'Min Area', type: 'range', min: 100, max: 5000, step: 100, default: 500 } ]}
+  ],
+   AI_VISION: [
+    { id: 'cnn_recognize', label: 'Object Recognition', endpoint: 'cnn/recognize', params: [] }
   ]
 };
 

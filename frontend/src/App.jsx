@@ -277,7 +277,9 @@ function App() {
           handleBakeEffect={handleBakeEffect} isRebuilding={isRebuilding}
           isBakingAnim={isBakingAnim} handleDiscardTool={handleDiscardTool}
           layers={layers} handleToggleLayer={handleToggleLayer} handleDeleteLayer={handleDeleteLayer}
-          currentActiveImageUrl={currentActiveImageUrl} logs={logs} logEndRef={logEndRef}
+          currentActiveImageUrl={currentActiveImageUrl} 
+          originalMediaUrl={originalMedia ? `${API_BASE_URL}/image/${originalMedia}` : null} 
+          logs={logs} logEndRef={logEndRef}
         />
 
       </main>

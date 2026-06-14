@@ -152,6 +152,41 @@ def compress_image():
         'filename': out_filename
     })
 
+# ── Channel Splitting ──────────────────────────────────────────────────────────
+@color_bp.route('/api/process/split-channel', methods=['POST'])
+def split_channel():
+    data = request.get_json()
+    filename = data.get('filename')
+    channel = data.get('channel', 'red').lower()
+
+    if not filename:
+        return jsonify({'error': 'filename diperlukan'}), 400
+
+    img = load_image(filename)
+    if img is None:
+        return jsonify({'error': 'File tidak ditemukan'}), 404
+
+    # OpenCV menggunakan format BGR (Biru=0, Hijau=1, Merah=2)
+    b, g, r = cv2.split(img)
+    zeros = np.zeros_like(b)
+
+    if channel == 'red':
+        result = cv2.merge([zeros, zeros, r])
+    elif channel == 'green':
+        result = cv2.merge([zeros, g, zeros])
+    elif channel == 'blue':
+        result = cv2.merge([b, zeros, zeros])
+    else:
+        return jsonify({'error': 'Channel tidak didukung'}), 400
+
+    ext = filename.rsplit('.', 1)[-1]
+    out_filename = save_processed(result, ext)
+
+    return jsonify({
+        'message': f'Channel {channel.upper()} berhasil diekstrak',
+        'filename': out_filename
+    })
+
 @color_bp.route('/api/processed/<filename>', methods=['GET'])
 def get_processed(filename):
     return send_from_directory(PROCESSED_FOLDER, filename)

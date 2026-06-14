@@ -3,10 +3,10 @@ import LiveHistogram from "./LiveHistogram";
 export default function InspectorSidebar({
   activeTool, isSyncing, toolParams, handleParamChange, applyCropTemplate,
   handleBakeEffect, isRebuilding, isBakingAnim, handleDiscardTool,
-  layers, handleToggleLayer, handleDeleteLayer, currentActiveImageUrl, logs, logEndRef
+  layers, handleToggleLayer, handleDeleteLayer, currentActiveImageUrl, originalMediaUrl, logs, logEndRef
 }) {
   return (
-   <aside
+  <aside
   className="w-80 flex-shrink-0 border-l border-cli-border flex flex-col relative z-20 backdrop-blur-md"
   style={{
     background: "rgba(7,17,29,.85)",
@@ -83,7 +83,10 @@ export default function InspectorSidebar({
           </div>
         </div>
 
-        <LiveHistogram imageUrl={currentActiveImageUrl} />
+        <LiveHistogram 
+           beforeUrl={originalMediaUrl} 
+           afterUrl={currentActiveImageUrl} 
+        />
 
         {/* LOGS */}
         <div className="mt-4 border border-cli-border p-3 bg-cli-bg h-24 flex flex-col shrink-0">
